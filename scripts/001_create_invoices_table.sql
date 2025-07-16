@@ -1,0 +1,23 @@
+CREATE TABLE IF NOT EXISTS invoices (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    order_number INT NOT NULL,
+    order_date TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    thca_legal BOOLEAN,
+    customer_type TEXT,
+    location_count INT,
+    customer_name TEXT,
+    customer_email TEXT,
+    customer_phone TEXT,
+    customer_address TEXT,
+    customer_suite TEXT,
+    customer_city TEXT,
+    customer_state TEXT,
+    customer_zip TEXT,
+    sales_rep TEXT,
+    additional_notes TEXT,
+    preferred_carriers TEXT[],
+    lift_gate_required TEXT,
+    ein_file_name TEXT,
+    tax_file_name TEXT,
+    selected_products JSONB
+);

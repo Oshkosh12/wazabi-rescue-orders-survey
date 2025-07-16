@@ -4,7 +4,7 @@ import { useState, useEffect } from "react"
 import { RotateCcw } from "lucide-react"
 
 interface Product {
-  id: number
+  id: number 
   name: string
   price: string
   image: string

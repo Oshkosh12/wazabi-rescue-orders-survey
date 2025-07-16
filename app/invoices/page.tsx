@@ -44,7 +44,7 @@ interface Invoice {
 }
 
 async function getInvoices(): Promise<Invoice[]> {
-  const apiUrl = `${process.env.NEXT_PUBLIC_VERCEL_URL || "https://orders.wazabilabs.com"}/api/invoices`
+  const apiUrl = `${process.env.NEXT_PUBLIC_VERCEL_URL || "https://wazabirescue.wazabilabs.com"}/api/invoices`
   const res = await fetch(apiUrl, {
     cache: "no-store", // Ensure data is always fresh
   })

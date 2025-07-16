@@ -262,18 +262,7 @@ export default function ProductSurvey() {
   const [formData, setFormData] = useState({
     name: "",
     email: "",
-    phone: "",
-    address: "",
-    suite: "",
-    city: "",
-    state: "",
-    zip: "",
     rep: "",
-    message: "",
-    carriers: [] as string[],
-    liftGate: "",
-    einFile: null as File | null,
-    taxFile: null as File | null,
   })
 
   // Load state from localStorage on component mount
@@ -294,18 +283,7 @@ export default function ProductSurvey() {
           parsed.formData || {
             name: "",
             email: "",
-            phone: "",
-            address: "",
-            suite: "",
-            city: "",
-            state: "",
-            zip: "",
             rep: "",
-            message: "",
-            carriers: [],
-            liftGate: "",
-            einFile: null,
-            taxFile: null,
           },
         )
       } catch (error) {
@@ -369,18 +347,7 @@ export default function ProductSurvey() {
     setFormData({
       name: "",
       email: "",
-      phone: "",
-      address: "",
-      suite: "",
-      city: "",
-      state: "",
-      zip: "",
       rep: "",
-      message: "",
-      carriers: [],
-      liftGate: "",
-      einFile: null,
-      taxFile: null,
     })
   }
 
@@ -455,10 +422,6 @@ for (const product of Object.values(selectedProducts)) {
   }
 }
 
-
-    const fileEinStatus = formData.einFile ? `Uploaded: ${formData.einFile.name}` : "Not Uploaded"
-    const fileTaxStatus = formData.taxFile ? `Uploaded: ${formData.taxFile.name}` : "Not Uploaded"
-
     invoiceContainer.innerHTML = `
     <div style="display: flex; justify-content: space-between; margin-bottom: 20px;">
       <div style="font-size: 24px; font-weight: bold;">Invoice #${formattedOrderNumber}</div>
@@ -469,34 +432,14 @@ for (const product of Object.values(selectedProducts)) {
     </div>
 
     <div style="display: flex; justify-content: space-between; margin-bottom: 20px;">
-      <div style="width: 48%;">
+      <div style="width: 100%;">
         <div style="font-weight: bold; margin-bottom: 5px; color: #333;">CUSTOMER DETAILS</div>
         <div>Name: ${formData.name}</div>
         <div>Email: ${formData.email}</div>
-        <div>Phone: ${formData.phone}</div>
-        <div>Address: ${formData.address}</div>
-        ${formData.suite ? `<div>Suite: ${formData.suite}</div>` : ""}
-        <div>City, State, Zip: ${formData.city}, ${formData.state} ${formData.zip}</div>
+        <div>Sales Rep: ${formData.rep || "N/A"}</div>
         <div>Customer Type: ${customerType}</div>
         <div>Number of Locations: ${locationCount}</div>
         <div>THC-A Legal in State: ${thcALegal ? "Yes" : "No"}</div>
-        <div>Preferred Delivery Method(s): ${formData.carriers.join(", ") || "N/A"}</div>
-        <div>Lift Gate Required: ${formData.liftGate || "N/A"}</div>
-        <div>Driver's license: ${fileEinStatus}</div>
-        <div>State Sales Tax Permit: ${fileTaxStatus}</div>
-      </div>
-      <div style="width: 48%;">
-        <div style="font-weight: bold; margin-bottom: 5px; color: #333;">SHIP TO</div>
-        <div>${formData.name}</div>
-        <div>${formData.address}</div>
-        ${formData.suite ? `<div>${formData.suite}</div>` : ""}
-        <div>${formData.city}, ${formData.state} ${formData.zip}</div>
-        <div>United States</div>
-        <div>Phone: ${formData.phone}</div>
-        <div>Email: ${formData.email}</div>
-        <div>Additional Note: ${formData.message || "N/A"}</div>
-        <div>Sales Rep: ${formData.rep || "N/A"}</div>
-
       </div>
     </div>
 
@@ -662,17 +605,6 @@ for (const product of Object.values(selectedProducts)) {
     const requiredFields = ["name", "email", "phone", "address", "city", "state", "zip", "rep"]
     const missingFields = requiredFields.filter((field) => !formData[field as keyof typeof formData])
 
-    if (
-      missingFields.length > 0 ||
-      !formData.einFile ||
-      !formData.taxFile ||
-      formData.carriers.length === 0 ||
-      !formData.liftGate
-    ) {
-      toast("Please fill all required fields before placing the order.")
-      return
-    }
-
     setIsLoading(true)
 
     try {
@@ -683,8 +615,6 @@ for (const product of Object.values(selectedProducts)) {
         locationCount,
         formData: {
           ...formData,
-          einFile: formData.einFile ? { name: formData.einFile.name, type: formData.einFile.type } : null,
-          taxFile: formData.taxFile ? { name: formData.taxFile.name, type: formData.taxFile.type } : null,
         },
         selectedProducts,
       }
@@ -733,18 +663,7 @@ for (const product of Object.values(selectedProducts)) {
       setFormData({
         name: "",
         email: "",
-        phone: "",
-        address: "",
-        suite: "",
-        city: "",
-        state: "",
-        zip: "",
         rep: "",
-        message: "",
-        carriers: [],
-        liftGate: "",
-        einFile: null,
-        taxFile: null,
       })
     } catch (error) {
       console.error("Error placing order:", error)
@@ -1172,143 +1091,29 @@ for (const product of Object.values(selectedProducts)) {
         <div className="text-right font-bold text-lg text-green-600 mb-6">Total: ${calculateTotal().toFixed(2)}</div>
 
         {/* Customer Form */}
+        <label className="block font-semibold mb-2 text-gray-700">
+            Bill To:
+          </label>
         <input
           type="text"
-          placeholder="Customer Name"
+          placeholder="Enter Business Name"
           value={formData.name}
           onChange={(e) => setFormData((prev) => ({ ...prev, name: e.target.value }))}
           className="w-full mb-3 p-3 border rounded-xl shadow-sm"
         />
+        <label className="block font-semibold mb-2 text-gray-700">
+            Ship To:
+          </label>
         <input
-          type="email"
-          placeholder="Customer Email"
+          type="text"
+          placeholder="Enter Business Name"
           value={formData.email}
           onChange={(e) => setFormData((prev) => ({ ...prev, email: e.target.value }))}
           className="w-full mb-3 p-3 border rounded-xl shadow-sm"
         />
-        <input
-          type="text"
-          placeholder="Customer Phone"
-          value={formData.phone}
-          onChange={(e) => setFormData((prev) => ({ ...prev, phone: e.target.value }))}
-          className="w-full mb-3 p-3 border rounded-xl shadow-sm"
-        />
-        <input
-          type="text"
-          placeholder="Customer Address"
-          value={formData.address}
-          onChange={(e) => setFormData((prev) => ({ ...prev, address: e.target.value }))}
-          className="w-full mb-3 p-3 border rounded-xl shadow-sm"
-        />
-        <input
-          type="text"
-          placeholder="Suite No. (Optional)"
-          value={formData.suite}
-          onChange={(e) => setFormData((prev) => ({ ...prev, suite: e.target.value }))}
-          className="w-full mb-3 p-3 border rounded-xl shadow-sm"
-        />
-
-        <div className="flex flex-col md:flex-row md:space-x-4">
-          <input
-            type="text"
-            placeholder="City"
-            value={formData.city}
-            onChange={(e) => setFormData((prev) => ({ ...prev, city: e.target.value }))}
-            className="w-full mb-3 p-3 border rounded-xl shadow-sm"
-          />
-          <input
-            type="text"
-            placeholder="State"
-            value={formData.state}
-            onChange={(e) => setFormData((prev) => ({ ...prev, state: e.target.value }))}
-            className="w-full mb-3 p-3 border rounded-xl shadow-sm"
-          />
-          <input
-            type="text"
-            placeholder="ZIP Code"
-            value={formData.zip}
-            onChange={(e) => setFormData((prev) => ({ ...prev, zip: e.target.value }))}
-            className="w-full mb-3 p-3 border rounded-xl shadow-sm"
-          />
-        </div>
-
-        {/* Delivery Methods */}
-        <div className="mb-6">
-          <label className="block font-semibold mb-2 text-gray-700">
-            Preferred Delivery Method(s) (You can select multiple options):
+         <label className="block font-semibold mb-2 text-gray-700">
+            Sales Rep:
           </label>
-          <div className="flex flex-wrap gap-4 mb-4">
-            {["USPS", "UPS", "LTL/PALLET"].map((carrier) => (
-              <label
-                key={carrier}
-                className="flex items-center space-x-2 bg-white border border-gray-300 rounded-xl px-4 py-2 cursor-pointer hover:border-green-500"
-              >
-                <input
-                  type="checkbox"
-                  value={carrier}
-                  checked={formData.carriers.includes(carrier)}
-                  onChange={(e) => {
-                    if (e.target.checked) {
-                      setFormData((prev) => ({ ...prev, carriers: [...prev.carriers, carrier] }))
-                    } else {
-                      setFormData((prev) => ({ ...prev, carriers: prev.carriers.filter((c) => c !== carrier) }))
-                    }
-                  }}
-                  className="form-checkbox text-green-500"
-                />
-                <span className="flex items-center gap-1">
-                  {carrier}
-                  {carrier === "USPS" && (
-                    <img
-                      src="https://cdn.shopify.com/s/files/1/0681/7654/3930/files/carrier-usps-CpQhhSUfhB4f.svg?v=1740070481"
-                      className="w-5 h-5"
-                    />
-                  )}
-                  {carrier === "UPS" && (
-                    <img
-                      src="https://cdn.shopify.com/s/files/1/0681/7654/3930/files/carrier-ups-shipping-CNgwyBiooydk.svg?v=1740071241"
-                      className="w-5 h-5"
-                    />
-                  )}
-                </span>
-              </label>
-            ))}
-          </div>
-
-          <label className="block font-semibold mb-1 text-gray-700">Is Lift Gate Required?</label>
-          <div className="flex gap-6">
-            <label className="flex items-center space-x-2">
-              <input
-                type="radio"
-                name="ltl_required"
-                value="Yes"
-                checked={formData.liftGate === "Yes"}
-                onChange={(e) => setFormData((prev) => ({ ...prev, liftGate: e.target.value }))}
-                className="form-radio text-green-500"
-              />
-              <span>Yes</span>
-            </label>
-            <label className="flex items-center space-x-2">
-              <input
-                type="radio"
-                name="ltl_required"
-                value="No"
-                checked={formData.liftGate === "No"}
-                onChange={(e) => setFormData((prev) => ({ ...prev, liftGate: e.target.value }))}
-                className="form-radio text-green-500"
-              />
-              <span>No</span>
-            </label>
-          </div>
-        </div>
-
-        <textarea
-          placeholder="Additional Notes"
-          value={formData.message}
-          onChange={(e) => setFormData((prev) => ({ ...prev, message: e.target.value }))}
-          rows={3}
-          className="w-full mb-3 p-3 border rounded-xl shadow-sm"
-        />
         <input
           type="text"
           placeholder="Sales Representative Name"
@@ -1316,29 +1121,8 @@ for (const product of Object.values(selectedProducts)) {
           onChange={(e) => setFormData((prev) => ({ ...prev, rep: e.target.value }))}
           className="w-full mb-3 p-3 border rounded-xl shadow-sm"
         />
-
-        <label className="block text-sm text-gray-700 font-medium mb-1">
-          Upload File or Take Photo: (Driver's license)
-        </label>
-        <input
-          type="file"
-          accept="image/*,application/pdf,.doc,.docx,.txt"
-          capture="environment"
-          onChange={(e) => setFormData((prev) => ({ ...prev, einFile: e.target.files?.[0] || null }))}
-          className="w-full mb-3 p-3 border rounded-xl shadow-sm"
-        />
-
-        <label className="block text-sm text-gray-700 font-medium mb-1">
-          Upload File or Take Photo: (State Sales Tax Permit)
-        </label>
-        <input
-          type="file"
-          accept="image/*,application/pdf,.doc,.docx,.txt"
-          capture="environment"
-          onChange={(e) => setFormData((prev) => ({ ...prev, taxFile: e.target.files?.[0] || null }))}
-          className="w-full mb-4 p-3 border rounded-xl shadow-sm"
-        />
-
+        <div className="flex flex-col md:flex-row md:space-x-4">
+        </div>
         <button
           onClick={handleSubmit}
           disabled={isLoading}

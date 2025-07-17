@@ -634,13 +634,13 @@ for (const product of Object.values(selectedProducts)) {
       }
 
       const responseData = await response.json()
-      const { id: invoiceId } = responseData // Capture generated ID and orderNumber
+      const { id: invoiceId, orderNumber } = responseData // Capture generated ID and orderNumber
 
       // Generate PDF
-      const pdf = await generatePDF( invoiceId) // Pass generated values
+      const pdf = await generatePDF(orderNumber, invoiceId) // Pass generated values
 
       // Download PDF
-      pdf.save(`Wazabi_Order_${String(invoiceId).padStart(3, "0")}_${new Date().toISOString().split("T")[0]}.pdf`)
+      pdf.save(`Wazabi_Order_${String(orderNumber).padStart(3, "0")}_${new Date().toISOString().split("T")[0]}.pdf`)
 
       // Convert PDF to blob for email
       const pdfBlob = pdf.output("blob")

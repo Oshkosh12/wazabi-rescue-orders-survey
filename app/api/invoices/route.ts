@@ -35,7 +35,7 @@ export async function POST(request: Request) {
           selected_products: data.selectedProducts,
         },
       ])
-      .select("id") // Select the generated id and order_number
+      .select("id, order_number") // Select the generated id and order_number
 
     if (error) {
       console.error("Error inserting data:", error)

@@ -86,11 +86,6 @@ export default async function InvoicesPage() {
                     <TableHead>Total Items</TableHead>
                     <TableHead>Total Amount</TableHead>
                     <TableHead>Sales Rep</TableHead>
-                    <TableHead>Carriers</TableHead>
-                    <TableHead>Lift Gate</TableHead>
-                    <TableHead>EIN File</TableHead>
-                    <TableHead>Tax File</TableHead>
-                    <TableHead>Notes</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -113,6 +108,7 @@ export default async function InvoicesPage() {
                         <TableCell>{new Date(invoice.order_date).toLocaleDateString()}</TableCell>
                         <TableCell>{invoice.customer_name}</TableCell>
                         <TableCell>{invoice.customer_email}</TableCell>
+                        <TableCell>{invoice.sales_rep || "N/A"}</TableCell>
                         <TableCell>{invoice.customer_type}</TableCell>
                         <TableCell>{invoice.location_count}</TableCell>
                         <TableCell>
@@ -121,13 +117,7 @@ export default async function InvoicesPage() {
                           </Badge>
                         </TableCell>
                         <TableCell>{totalItems}</TableCell>
-                        <TableCell>${totalAmount.toFixed(2)}</TableCell>
-                        <TableCell>{invoice.sales_rep || "N/A"}</TableCell>
-                        <TableCell>{invoice.preferred_carriers.join(", ") || "N/A"}</TableCell>
-                        <TableCell>{invoice.lift_gate_required || "N/A"}</TableCell>
-                        <TableCell>{invoice.ein_file_name || "N/A"}</TableCell>
-                        <TableCell>{invoice.tax_file_name || "N/A"}</TableCell>
-                        <TableCell className="max-w-[200px] truncate">{invoice.additional_notes || "N/A"}</TableCell>
+                        <TableCell>${totalAmount.toFixed(2)}</TableCell>   
                       </TableRow>
                     )
                   })}

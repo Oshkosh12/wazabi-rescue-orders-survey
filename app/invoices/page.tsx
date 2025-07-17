@@ -28,18 +28,7 @@ interface Invoice {
   location_count: number
   customer_name: string
   customer_email: string
-  customer_phone: string
-  customer_address: string
-  customer_suite: string | null
-  customer_city: string
-  customer_state: string
-  customer_zip: string
   sales_rep: string
-  additional_notes: string | null
-  preferred_carriers: string[]
-  lift_gate_required: string
-  ein_file_name: string | null
-  tax_file_name: string | null
   selected_products: Record<number, SelectedProduct>
 }
 

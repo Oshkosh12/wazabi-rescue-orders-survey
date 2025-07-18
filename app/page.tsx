@@ -457,7 +457,7 @@ for (const product of Object.values(selectedProducts)) {
 
     <div style="text-align: center; margin-top: 40px; margin-bottom: 20px;">
       <div>Thank you for shopping with us!</div>
-      <div style="font-weight: bold; margin-top: 10px;">Wazabi Exotics</div>
+      <div style="font-weight: bold; margin-top: 10px;">Flying Brands</div>
       <div>5800 Corporate Drive, Ste D1, Houston TX 77036, United States</div>
       <div>info@wazabilabs.com</div>
       <div>wazabilabs.com</div>

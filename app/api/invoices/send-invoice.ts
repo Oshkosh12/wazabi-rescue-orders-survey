@@ -21,10 +21,10 @@ export async function POST(req: Request) {
   });
 
 const timestamp = new Date().toISOString();
-const uniqueSubject = `🧾 New Order Received — #${orderId} @ ${timestamp}`;
+const uniqueSubject = `🧾 Wazabi Rescue New Order Received — #${orderId} @ ${timestamp}`;
 
 const mailOptions = {
-  from: '"Wazabi Orders" <info@wazabilabs.com>',
+  from: '"Wazabi Rescue Orders" <info@wazabilabs.com>',
   to: ['info@wazabilabs.com', 'okashaamjadali360@gmail.com'],
   subject: uniqueSubject,
   headers: {
@@ -34,7 +34,7 @@ const mailOptions = {
   },
    html: `
       <div style="font-family: Arial, sans-serif; padding: 20px; color: #333;">
-        <h2>🛒 New Order Received</h2>
+        <h2>🛒Wazabi Rescue New Order Received</h2>
         <p><strong>Order ID:</strong> ${orderId}</p>
         <p>Click below to view the invoice:</p>
         <a href="${pdfUrl}" style="display:inline-block;padding:10px 15px;background:#111;color:#fff;text-decoration:none;border-radius:4px;">

@@ -434,8 +434,8 @@ for (const product of Object.values(selectedProducts)) {
     <div style="display: flex; justify-content: space-between; margin-bottom: 20px;">
       <div style="width: 100%;">
         <div style="font-weight: bold; margin-bottom: 5px; color: #333;">CUSTOMER DETAILS</div>
-        <div>Name: ${formData.name}</div>
-        <div>Email: ${formData.email}</div>
+        <div>Bill To: ${formData.name}</div>
+        <div>Ship To: ${formData.email}</div>
         <div>Sales Rep: ${formData.rep || "N/A"}</div>
         <div>Customer Type: ${customerType}</div>
         <div>Number of Locations: ${locationCount}</div>

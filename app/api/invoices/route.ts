@@ -25,7 +25,6 @@ export async function POST(request: Request) {
       .from("invoices")
       .insert([
         {
-          order_number: nextOrderNumber, // Use the generated sequential number
           thca_legal: data.thcALegal,
           customer_type: data.customerType,
           location_count: data.locationCount,

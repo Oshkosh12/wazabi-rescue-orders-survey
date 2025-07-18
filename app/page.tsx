@@ -427,7 +427,7 @@ for (const product of Object.values(selectedProducts)) {
       <div style="font-size: 24px; font-weight: bold;">Invoice #${formattedOrderNumber}</div>
       <div style="text-align: right;">
         <div>Order ID: ${invoiceId}</div>
-        <div>Date: ${orderDate}</div>
+        <div>Date: ${orderDate}</div> 
       </div>
     </div>
 

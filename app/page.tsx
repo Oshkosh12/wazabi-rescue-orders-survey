@@ -549,16 +549,17 @@ for (const product of Object.values(selectedProducts)) {
     }))
   }
 
-  const updateProductPrice = (productId: number, price: string) => {
-    const cleanPrice = price.replace(/^0+(?=\d)/, "") // Remove leading zeros
-    setSelectedProducts((prev) => ({
-      ...prev,
-      [productId]: {
-        ...prev[productId],
-        price: `$${Number.parseFloat(cleanPrice || "0").toFixed(2)}`,
-      },
-    }))
-  }
+const updateProductPrice = (productId: number, price: string) => {
+  const cleanPrice = price.replace(/^0+(?=\d)/, "") // Remove leading zeros
+  setSelectedProducts((prev) => ({
+    ...prev,
+    [productId]: {
+      ...prev[productId],
+      price: cleanPrice, // store as plain string like "12.50"
+    },
+  }))
+}
+
 
   const calculateTotal = () => {
     return Object.values(selectedProducts).reduce((total, product) => {

@@ -918,34 +918,29 @@ for (const product of Object.values(selectedProducts)) {
           <div className="w-full md:w-1/2">
             {isSelected && (
               <div className="col-span-3 mb-3">
-  <label className="block text-sm font-medium text-gray-700 mb-1">
-    Set Product Price ($)
-  </label>
-<input
-  type="text"
-  inputMode="decimal"
-  pattern="^\d*(\.\d{0,2})?$"
-  value={selectedProducts[product.id].price} // <-- no parseFloat!
-  onChange={(e) => {
-    const raw = e.target.value
-    // Allow clearing or valid decimal input
-    if (raw === "" || /^\d*(\.\d{0,2})?$/.test(raw)) {
-      updateProductPrice(product.id, raw)
-    }
-  }}
-  onFocus={(e) => e.target.select()}
-  onKeyDown={(e) => {
-    if (e.key === "Enter") {
-      e.preventDefault()
-      updateProductPrice(product.id, e.currentTarget.value)
-      e.currentTarget.blur()
-    }
-  }}
-  className="w-full p-2 border rounded shadow-sm"
-/>
-
-</div>
-
+                <label className="block text-sm font-medium text-gray-700 mb-1">Set Product Price ($)</label>
+                <input
+                  type="text"
+                  inputMode="decimal"
+                  pattern="^\d+(\.\d{1,2})?$"
+                  value={Number.parseFloat(selectedProducts[product.id].price.replace("$", "")) || ""}
+                  onChange={(e) => {
+                    let raw = e.target.value
+                    raw = raw.replace(/^0+(?=\d)/, "") // remove leading zeros
+                    updateProductPrice(product.id, raw)
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault()
+                      let raw = (e.target as HTMLInputElement).value
+                      raw = raw.replace(/^0+(?=\d)/, "")
+                      updateProductPrice(product.id, raw)
+                      ;(e.target as HTMLInputElement).blur()
+                    }
+                  }}
+                  className="w-full p-2 border rounded shadow-sm"
+                />
+              </div>
             )}
 
             <div className="grid grid-cols-3 gap-3">

@@ -919,27 +919,27 @@ for (const product of Object.values(selectedProducts)) {
             {isSelected && (
               <div className="col-span-3 mb-3">
                 <label className="block text-sm font-medium text-gray-700 mb-1">Set Product Price ($)</label>
-               <input
-  type="text"
-  inputMode="decimal"
-  pattern="^\d+(\.\d{1,2})?$"
-  value={selectedProducts[product.id].price} // use the raw string directly
-  onChange={(e) => {
-    let raw = e.target.value;
-    raw = raw.replace(/^0+(?=\d)/, ""); // optional: remove leading zeros
-    updateProductPrice(product.id, raw);
-  }}
-  onKeyDown={(e) => {
-    if (e.key === "Enter") {
-      e.preventDefault();
-      const raw = (e.target as HTMLInputElement).value.replace(/^0+(?=\d)/, "");
-      updateProductPrice(product.id, raw);
-      (e.target as HTMLInputElement).blur();
-    }
-  }}
-  className="w-full p-2 border rounded shadow-sm"
-/>
-
+                <input
+                  type="text"
+                  inputMode="decimal"
+                  pattern="^\d+(\.\d{1,2})?$"
+                  value={Number.parseFloat(selectedProducts[product.id].price.replace("$", "")) || ""}
+                  onChange={(e) => {
+                    let raw = e.target.value
+                    raw = raw.replace(/^0+(?=\d)/, "") // remove leading zeros
+                    updateProductPrice(product.id, raw)
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault()
+                      let raw = (e.target as HTMLInputElement).value
+                      raw = raw.replace(/^0+(?=\d)/, "")
+                      updateProductPrice(product.id, raw)
+                      ;(e.target as HTMLInputElement).blur()
+                    }
+                  }}
+                  className="w-full p-2 border rounded shadow-sm"
+                />
               </div>
             )}
 

@@ -921,29 +921,29 @@ for (const product of Object.values(selectedProducts)) {
   <label className="block text-sm font-medium text-gray-700 mb-1">
     Set Product Price ($)
   </label>
-  <input
-    type="text"
-    inputMode="decimal"
-    pattern="^\d+(\.\d{1,2})?$"
-    value={selectedProducts[product.id].price.replace("$", "")}
-    onChange={(e) => {
-      let raw = e.target.value
-      // Allow blank input or numbers with up to 2 decimals
-      if (/^\d*(\.\d{0,2})?$/.test(raw) || raw === "") {
-        updateProductPrice(product.id, raw)
-      }
-    }}
-    onFocus={(e) => e.target.select()} // Select all text when clicked
-    onKeyDown={(e) => {
-      if (e.key === "Enter") {
-        e.preventDefault()
-        let raw = (e.target as HTMLInputElement).value
-        updateProductPrice(product.id, raw)
-        ;(e.target as HTMLInputElement).blur()
-      }
-    }}
-    className="w-full p-2 border rounded shadow-sm"
-  />
+<input
+  type="text"
+  inputMode="decimal"
+  pattern="^\d*(\.\d{0,2})?$"
+  value={selectedProducts[product.id].price} // <-- no parseFloat!
+  onChange={(e) => {
+    const raw = e.target.value
+    // Allow clearing or valid decimal input
+    if (raw === "" || /^\d*(\.\d{0,2})?$/.test(raw)) {
+      updateProductPrice(product.id, raw)
+    }
+  }}
+  onFocus={(e) => e.target.select()}
+  onKeyDown={(e) => {
+    if (e.key === "Enter") {
+      e.preventDefault()
+      updateProductPrice(product.id, e.currentTarget.value)
+      e.currentTarget.blur()
+    }
+  }}
+  className="w-full p-2 border rounded shadow-sm"
+/>
+
 </div>
 
             )}

@@ -917,30 +917,63 @@ for (const product of Object.values(selectedProducts)) {
 
           <div className="w-full md:w-1/2">
             {isSelected && (
-              <div className="col-span-3 mb-3">
-                <label className="block text-sm font-medium text-gray-700 mb-1">Set Product Price ($)</label>
-                <input
-                  type="text"
-                  inputMode="decimal"
-                  pattern="^\d+(\.\d{1,2})?$"
-                  value={Number.parseFloat(selectedProducts[product.id].price.replace("$", "")) || ""}
-                  onChange={(e) => {
-                    let raw = e.target.value
-                    raw = raw.replace(/^0+(?=\d)/, "") // remove leading zeros
-                    updateProductPrice(product.id, raw)
-                  }}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") {
-                      e.preventDefault()
-                      let raw = (e.target as HTMLInputElement).value
-                      raw = raw.replace(/^0+(?=\d)/, "")
-                      updateProductPrice(product.id, raw)
-                      ;(e.target as HTMLInputElement).blur()
-                    }
-                  }}
-                  className="w-full p-2 border rounded shadow-sm"
-                />
-              </div>
+             <div className="col-span-3 mb-3">
+  <label className="block text-sm font-medium text-gray-700 mb-1">
+    Set Product Price ($)
+  </label>
+  <input
+    type="text"
+    inputMode="decimal"
+    pattern="^\d*(\.\d{0,2})?$"
+    value={
+      selectedProducts[product.id]?.price
+        ? selectedProducts[product.id].price.replace("$", "")
+        : "0.00"
+    }
+    onFocus={(e) => e.target.select()} // ✅ Select all text when user clicks/taps
+    onChange={(e) => {
+      let raw = e.target.value
+
+      // Allow only digits and one dot
+      raw = raw.replace(/[^0-9.]/g, "")
+      const parts = raw.split(".")
+      if (parts.length > 2) raw = parts[0] + "." + parts[1]
+
+      if (raw.startsWith("00")) {
+        raw = raw.replace(/^0+/, "")
+      } else if (raw.startsWith("0") && !raw.startsWith("0.")) {
+        raw = raw.replace(/^0+/, "")
+      }
+
+      if (raw.startsWith(".")) {
+        raw = "0" + raw
+      }
+
+      updateProductPrice(product.id, raw)
+    }}
+    onKeyDown={(e) => {
+      if (e.key === "Enter") {
+        e.preventDefault()
+        let raw = (e.target as HTMLInputElement).value
+        raw = raw.replace(/[^0-9.]/g, "")
+        const parts = raw.split(".")
+        if (parts.length > 2) raw = parts[0] + "." + parts[1]
+        const formatted = raw ? parseFloat(raw).toFixed(2) : "0.00"
+        updateProductPrice(product.id, formatted)
+        ;(e.target as HTMLInputElement).blur()
+      }
+    }}
+    onBlur={(e) => {
+      let raw = e.target.value
+      raw = raw.replace(/[^0-9.]/g, "")
+      const parts = raw.split(".")
+      if (parts.length > 2) raw = parts[0] + "." + parts[1]
+      const formatted = raw ? parseFloat(raw).toFixed(2) : "0.00"
+      updateProductPrice(product.id, formatted)
+    }}
+    className="w-full p-2 border rounded shadow-sm"
+  />
+</div>
             )}
 
             <div className="grid grid-cols-3 gap-3">

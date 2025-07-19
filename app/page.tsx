@@ -921,37 +921,27 @@ for (const product of Object.values(selectedProducts)) {
   <label className="block text-sm font-medium text-gray-700 mb-1">
     Set Product Price ($)
   </label>
-<input
-  type="text"
-  inputMode="decimal"
-  placeholder="0.00"
-  value={selectedProducts[product.id]?.price || ""}
-  onFocus={(e) => {
-    // Select all text when focused (for easier overwrite)
-    e.target.select()
-  }}
-  onChange={(e) => {
-    let raw = e.target.value
-
-    // Allow only numbers and one dot
-    raw = raw.replace(/[^\d.]/g, "")
-
-    // Prevent multiple dots
-    const parts = raw.split(".")
-    if (parts.length > 2) {
-      raw = parts[0] + "." + parts[1] // Keep only first dot
-    }
-
-    // Limit to 2 decimal places
-    if (parts[1]?.length > 2) {
-      raw = parts[0] + "." + parts[1].slice(0, 2)
-    }
-
-    updateProductPrice(product.id, raw)
-  }}
-  className="w-full p-2 border rounded shadow-sm"
-/>
-
+  <input
+    type="text"
+    inputMode="decimal"
+    pattern="^\d+(\.\d{1,2})?$"
+    value={selectedProducts[product.id].price.replace("$", "")}
+    onChange={(e) => {
+      let raw = e.target.value
+      raw = raw.replace(/^0+(?=\d)/, "") // remove leading zeros
+      updateProductPrice(product.id, raw)
+    }}
+    onKeyDown={(e) => {
+      if (e.key === "Enter") {
+        e.preventDefault()
+        let raw = (e.target as HTMLInputElement).value
+        raw = raw.replace(/^0+(?=\d)/, "")
+        updateProductPrice(product.id, raw)
+        ;(e.target as HTMLInputElement).blur()
+      }
+    }}
+    className="w-full p-2 border rounded shadow-sm"
+  />
 </div>
 
             )}

@@ -925,18 +925,20 @@ for (const product of Object.values(selectedProducts)) {
     type="text"
     inputMode="decimal"
     pattern="^\d+(\.\d{1,2})?$"
-    value={selectedProducts[product.id].price.replace("$", "")}
+    value={selectedProducts[product.id].price}
+    onFocus={(e) => {
+      e.target.select() // auto-selects the entire value like "0.00"
+    }}
     onChange={(e) => {
       let raw = e.target.value
-      raw = raw.replace(/^0+(?=\d)/, "") // remove leading zeros
-      updateProductPrice(product.id, raw)
+      // Allow only digits and one optional decimal with up to 2 digits
+      if (/^\d*\.?\d{0,2}$/.test(raw)) {
+        updateProductPrice(product.id, raw)
+      }
     }}
     onKeyDown={(e) => {
       if (e.key === "Enter") {
         e.preventDefault()
-        let raw = (e.target as HTMLInputElement).value
-        raw = raw.replace(/^0+(?=\d)/, "")
-        updateProductPrice(product.id, raw)
         ;(e.target as HTMLInputElement).blur()
       }
     }}

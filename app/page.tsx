@@ -487,6 +487,30 @@ export default function ProductSurvey() {
     return pdf
   }
 
+  const uploadPDFToStorage = async (pdfBlob: Blob, orderNumber: number) => {
+    try {
+      const formData = new FormData()
+      const fileName = `invoice-${String(orderNumber).padStart(3, "0")}-${Date.now()}.pdf`
+      formData.append("pdf", pdfBlob, fileName)
+      formData.append("orderNumber", String(orderNumber))
+
+      const response = await fetch("/api/invoices/upload-pdf", {
+        method: "POST",
+        body: formData,
+      })
+
+      if (!response.ok) {
+        throw new Error(`Upload failed: ${response.status}`)
+      }
+
+      const result = await response.json()
+      return result.pdfUrl
+    } catch (error) {
+      console.error("Error uploading PDF:", error)
+      return null
+    }
+  }
+
   const sendEmailWithPDF = async (pdfUrl: string, orderNumber: number) => {
     try {
       console.log("📧 Sending email with PDF URL...")
@@ -603,10 +627,7 @@ export default function ProductSurvey() {
     setIsLoading(true)
 
     try {
-      // Generate PDF first
-      const pdf = await generatePDF(0, "temp") // Temporary values
-      const pdfDataUrl = pdf.output("dataurlstring")
-
+      // Step 1: Save order data first (without PDF)
       const submissionData = {
         thcALegal,
         customerType,
@@ -615,9 +636,9 @@ export default function ProductSurvey() {
           ...formData,
         },
         selectedProducts,
-        pdfData: pdfDataUrl, // Include PDF data
       }
 
+      console.log("📝 Saving order data...")
       const response = await fetch("/api/invoices", {
         method: "POST",
         headers: {
@@ -632,13 +653,38 @@ export default function ProductSurvey() {
       }
 
       const responseData = await response.json()
-      const { id: invoiceId, orderNumber, pdfUrl } = responseData
+      const { id: invoiceId, orderNumber } = responseData
 
-      // Download PDF for user
+      console.log("✅ Order saved, generating PDF...")
+
+      // Step 2: Generate PDF with actual order data
+      const pdf = await generatePDF(orderNumber, invoiceId)
+      const pdfBlob = pdf.output("blob")
+
+      // Step 3: Download PDF for user
       pdf.save(`Wazabi_Order_${String(orderNumber).padStart(3, "0")}_${new Date().toISOString().split("T")[0]}.pdf`)
 
-      // Send email with PDF URL if available
+      console.log("📤 Uploading PDF to storage...")
+
+      // Step 4: Upload PDF to storage
+      const pdfUrl = await uploadPDFToStorage(pdfBlob, orderNumber)
+
       if (pdfUrl) {
+        console.log("✅ PDF uploaded, updating database...")
+
+        // Step 5: Update the database with PDF URL
+        await fetch("/api/invoices/update-pdf", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            invoiceId: invoiceId,
+            pdfUrl: pdfUrl,
+          }),
+        })
+
+        // Step 6: Send email with PDF URL
         await sendEmailWithPDF(pdfUrl, orderNumber)
       } else {
         toast("Order saved but PDF upload failed. Please contact support.")

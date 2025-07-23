@@ -4,7 +4,7 @@ import { useState, useEffect } from "react"
 import { RotateCcw } from "lucide-react"
 
 interface Product {
-  id: number 
+  id: number
   name: string
   price: string
   image: string
@@ -352,23 +352,22 @@ export default function ProductSurvey() {
   }
 
   const convertImageToBase64 = (url: string): Promise<string> => {
-  return new Promise((resolve, reject) => {
-    const img = new Image()
-    img.crossOrigin = "Anonymous"
-    img.onload = () => {
-      const canvas = document.createElement("canvas")
-      canvas.width = img.width
-      canvas.height = img.height
-      const ctx = canvas.getContext("2d")
-      ctx?.drawImage(img, 0, 0)
-      const dataURL = canvas.toDataURL("image/png")
-      resolve(dataURL)
-    }
-    img.onerror = () => resolve("") // fallback to empty if fails
-    img.src = url
-  })
-}
-
+    return new Promise((resolve, reject) => {
+      const img = new Image()
+      img.crossOrigin = "Anonymous"
+      img.onload = () => {
+        const canvas = document.createElement("canvas")
+        canvas.width = img.width
+        canvas.height = img.height
+        const ctx = canvas.getContext("2d")
+        ctx?.drawImage(img, 0, 0)
+        const dataURL = canvas.toDataURL("image/png")
+        resolve(dataURL)
+      }
+      img.onerror = () => resolve("") // fallback to empty if fails
+      img.src = url
+    })
+  }
 
   const generatePDF = async (orderNumber: number, invoiceId: string) => {
     // Dynamic import to avoid SSR issues
@@ -398,13 +397,13 @@ export default function ProductSurvey() {
 
     let itemsHtml = ""
 
-for (const product of Object.values(selectedProducts)) {
-  for (const [variant, qty] of Object.entries(product.variantsSelected)) {
-    if (qty > 0) {
-      const variantImageUrl = (product.variants.find((v) => v.name === variant) || {}).image || product.image
-      const base64Image = await convertImageToBase64(variantImageUrl)
+    for (const product of Object.values(selectedProducts)) {
+      for (const [variant, qty] of Object.entries(product.variantsSelected)) {
+        if (qty > 0) {
+          const variantImageUrl = (product.variants.find((v) => v.name === variant) || {}).image || product.image
+          const base64Image = await convertImageToBase64(variantImageUrl)
 
-      itemsHtml += `
+          itemsHtml += `
         <div class="break-inside-avoid" style="display: flex; align-items: center; margin-bottom: 10px;">
           <img src="${base64Image}" style="width: 60px; height: 60px; object-fit: cover; margin-right: 10px; border-radius: 4px;">
           <div style="flex-grow: 1;">
@@ -418,9 +417,9 @@ for (const product of Object.values(selectedProducts)) {
           </div>
         </div>
       `
+        }
+      }
     }
-  }
-}
 
     invoiceContainer.innerHTML = `
     <div style="display: flex; justify-content: space-between; margin-bottom: 20px;">
@@ -467,11 +466,11 @@ for (const product of Object.values(selectedProducts)) {
     document.body.appendChild(invoiceContainer)
 
     const canvas = await html2canvas(invoiceContainer, {
- scale: 2,                         
- scrollY: -window.scrollY,         
- backgroundColor: "#ffffff",     
- windowWidth: invoiceContainer.scrollWidth, 
- }) // Scale for better resolution
+      scale: 2,
+      scrollY: -window.scrollY,
+      backgroundColor: "#ffffff",
+      windowWidth: invoiceContainer.scrollWidth,
+    }) // Scale for better resolution
     const imgData = canvas.toDataURL("image/png")
 
     const pdf = new jsPDF("p", "mm", "a4")
@@ -485,7 +484,7 @@ for (const product of Object.values(selectedProducts)) {
     heightLeft -= pageHeight
 
     while (heightLeft > 0) {
-      position = - (imgHeight - heightLeft)
+      position = -(imgHeight - heightLeft)
       pdf.addPage()
       pdf.addImage(imgData, "PNG", 0, position, imgWidth, imgHeight)
       heightLeft -= pageHeight
@@ -496,26 +495,32 @@ for (const product of Object.values(selectedProducts)) {
     return pdf
   }
 
- const sendEmailWithPDF = async (pdfBlob: Blob) => {
-  const formData = new FormData();
-  formData.append("pdf", pdfBlob, "invoice.pdf");
+  const sendEmailWithPDF = async (pdfBlob: Blob, orderNumber: number) => {
+    const formData = new FormData()
+    formData.append("pdf", pdfBlob, `invoice-${String(orderNumber).padStart(3, "0")}.pdf`)
+    formData.append("orderId", String(orderNumber).padStart(3, "0"))
 
-  try {
-    const res = await fetch("/api/send-invoice", {
-      method: "POST",
-      body: formData,
-    });
-    if (res.ok) {
-      toast("PDF sent to admin successfully!");
-    } else {
-      toast("Failed to send PDF.");
+    try {
+      console.log("📧 Sending email with PDF...")
+      const res = await fetch("/api/invoices/send-invoices", {
+        method: "POST",
+        body: formData,
+      })
+
+      const responseData = await res.json()
+
+      if (res.ok) {
+        console.log("✅ Email sent successfully")
+        toast("PDF sent to admin successfully!")
+      } else {
+        console.error("❌ Email sending failed:", responseData)
+        toast(`Failed to send PDF: ${responseData.error || "Unknown error"}`)
+      }
+    } catch (err) {
+      console.error("❌ Error sending PDF:", err)
+      toast("Error sending PDF.")
     }
-  } catch (err) {
-    console.error(err);
-    toast("Error sending PDF.");
   }
-};
-
 
   const handleProductSelect = (productId: number) => {
     const product = products.find((p) => p.id === productId)
@@ -549,17 +554,16 @@ for (const product of Object.values(selectedProducts)) {
     }))
   }
 
-const updateProductPrice = (productId: number, price: string) => {
-  const cleanPrice = price.replace(/^0+(?=\d)/, "") // Remove leading zeros
-  setSelectedProducts((prev) => ({
-    ...prev,
-    [productId]: {
-      ...prev[productId],
-      price: cleanPrice, // store as plain string like "12.50"
-    },
-  }))
-}
-
+  const updateProductPrice = (productId: number, price: string) => {
+    const cleanPrice = price.replace(/^0+(?=\d)/, "") // Remove leading zeros
+    setSelectedProducts((prev) => ({
+      ...prev,
+      [productId]: {
+        ...prev[productId],
+        price: cleanPrice, // store as plain string like "12.50"
+      },
+    }))
+  }
 
   const calculateTotal = () => {
     return Object.values(selectedProducts).reduce((total, product) => {
@@ -647,7 +651,7 @@ const updateProductPrice = (productId: number, price: string) => {
       const pdfBlob = pdf.output("blob")
 
       // Send email with PDF
-      await sendEmailWithPDF(pdfBlob)
+      await sendEmailWithPDF(pdfBlob, orderNumber)
 
       // Simulate order processing
       await new Promise((resolve) => setTimeout(resolve, 2000))
@@ -919,34 +923,31 @@ const updateProductPrice = (productId: number, price: string) => {
           <div className="w-full md:w-1/2">
             {isSelected && (
               <div className="col-span-3 mb-3">
-  <label className="block text-sm font-medium text-gray-700 mb-1">
-    Set Product Price ($)
-  </label>
-  <input
-    type="text"
-    inputMode="decimal"
-    pattern="^\d+(\.\d{1,2})?$"
-    value={selectedProducts[product.id].price}
-    onFocus={(e) => {
-      e.target.select() // auto-selects the entire value like "0.00"
-    }}
-    onChange={(e) => {
-      let raw = e.target.value
-      // Allow only digits and one optional decimal with up to 2 digits
-      if (/^\d*\.?\d{0,2}$/.test(raw)) {
-        updateProductPrice(product.id, raw)
-      }
-    }}
-    onKeyDown={(e) => {
-      if (e.key === "Enter") {
-        e.preventDefault()
-        ;(e.target as HTMLInputElement).blur()
-      }
-    }}
-    className="w-full p-2 border rounded shadow-sm"
-  />
-</div>
-
+                <label className="block text-sm font-medium text-gray-700 mb-1">Set Product Price ($)</label>
+                <input
+                  type="text"
+                  inputMode="decimal"
+                  pattern="^\d+(\.\d{1,2})?$"
+                  value={selectedProducts[product.id].price}
+                  onFocus={(e) => {
+                    e.target.select() // auto-selects the entire value like "0.00"
+                  }}
+                  onChange={(e) => {
+                    const raw = e.target.value
+                    // Allow only digits and one optional decimal with up to 2 digits
+                    if (/^\d*\.?\d{0,2}$/.test(raw)) {
+                      updateProductPrice(product.id, raw)
+                    }
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault()
+                      ;(e.target as HTMLInputElement).blur()
+                    }
+                  }}
+                  className="w-full p-2 border rounded shadow-sm"
+                />
+              </div>
             )}
 
             <div className="grid grid-cols-3 gap-3">
@@ -1097,9 +1098,7 @@ const updateProductPrice = (productId: number, price: string) => {
         <div className="text-right font-bold text-lg text-green-600 mb-6">Total: ${calculateTotal().toFixed(2)}</div>
 
         {/* Customer Form */}
-        <label className="block font-semibold mb-2 text-gray-700">
-            Bill To:
-          </label>
+        <label className="block font-semibold mb-2 text-gray-700">Bill To:</label>
         <input
           type="text"
           placeholder="Enter Business Name"
@@ -1107,9 +1106,7 @@ const updateProductPrice = (productId: number, price: string) => {
           onChange={(e) => setFormData((prev) => ({ ...prev, name: e.target.value }))}
           className="w-full mb-3 p-3 border rounded-xl shadow-sm"
         />
-        <label className="block font-semibold mb-2 text-gray-700">
-            Ship To:
-          </label>
+        <label className="block font-semibold mb-2 text-gray-700">Ship To:</label>
         <input
           type="text"
           placeholder="Enter Business Name"
@@ -1117,9 +1114,7 @@ const updateProductPrice = (productId: number, price: string) => {
           onChange={(e) => setFormData((prev) => ({ ...prev, email: e.target.value }))}
           className="w-full mb-3 p-3 border rounded-xl shadow-sm"
         />
-         <label className="block font-semibold mb-2 text-gray-700">
-            Sales Rep:
-          </label>
+        <label className="block font-semibold mb-2 text-gray-700">Sales Rep:</label>
         <input
           type="text"
           placeholder="Sales Representative Name"
@@ -1127,8 +1122,7 @@ const updateProductPrice = (productId: number, price: string) => {
           onChange={(e) => setFormData((prev) => ({ ...prev, rep: e.target.value }))}
           className="w-full mb-3 p-3 border rounded-xl shadow-sm"
         />
-        <div className="flex flex-col md:flex-row md:space-x-4">
-        </div>
+        <div className="flex flex-col md:flex-row md:space-x-4"></div>
         <button
           onClick={handleSubmit}
           disabled={isLoading}

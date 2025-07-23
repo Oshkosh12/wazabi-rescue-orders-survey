@@ -621,7 +621,7 @@ const updateProductPrice = (productId: number, price: string) => {
       }
 
       // Send data to API route
-      const response = await fetch("/api/invoice", {
+      const response = await fetch("/api/invoices", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

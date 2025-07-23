@@ -4,13 +4,16 @@ export const runtime = "nodejs"
 
 export async function POST(req: Request) {
   try {
+    console.log("📧 Email API called")
+
     const body = await req.json()
-    console.log("✅ Received body:", body)
+    console.log("✅ Received body:", JSON.stringify(body, null, 2))
 
     const pdfUrl = body?.pdfUrl?.trim()
     const orderId = body?.orderId?.trim() || "N/A"
 
     if (!pdfUrl) {
+      console.error("❌ Missing PDF URL")
       return new Response(JSON.stringify({ error: "Missing PDF URL." }), {
         status: 400,
         headers: { "Content-Type": "application/json" },
@@ -20,6 +23,9 @@ export async function POST(req: Request) {
     // Gmail credentials from environment variables
     const user = "info@wazabilabs.com"
     const pass = process.env.GMAIL_APP_PASSWORD
+
+    console.log("📧 Email user:", user)
+    console.log("📧 Password exists:", !!pass)
 
     if (!pass) {
       console.error("❌ GMAIL_APP_PASSWORD not set.")
@@ -32,24 +38,33 @@ export async function POST(req: Request) {
     console.log("✅ Creating transporter...")
 
     // Configure Nodemailer with Gmail
-    const transporter = nodemailer.createTransporter({
+    const transporter = nodemailer.createTransport({
       service: "gmail",
       auth: {
         user,
         pass,
       },
+      debug: true, // Enable debug logging
+      logger: true, // Enable logger
     })
 
     // Verify transporter configuration
     try {
+      console.log("🔍 Verifying transporter...")
       await transporter.verify()
       console.log("✅ Transporter verified successfully")
     } catch (verifyError) {
       console.error("❌ Transporter verification failed:", verifyError)
-      return new Response(JSON.stringify({ error: "Email configuration verification failed." }), {
-        status: 500,
-        headers: { "Content-Type": "application/json" },
-      })
+      return new Response(
+        JSON.stringify({
+          error: "Email configuration verification failed.",
+          details: verifyError.message,
+        }),
+        {
+          status: 500,
+          headers: { "Content-Type": "application/json" },
+        },
+      )
     }
 
     const timestamp = new Date().toISOString()
@@ -80,20 +95,37 @@ export async function POST(req: Request) {
       `,
     }
 
-    console.log("✅ Sending email...")
-    await transporter.sendMail(mailOptions)
-    console.log("✅ Email sent successfully.")
-
-    return new Response(JSON.stringify({ success: true, message: "Email sent successfully" }), {
-      status: 200,
-      headers: { "Content-Type": "application/json" },
+    console.log("✅ Mail options prepared:", {
+      from: mailOptions.from,
+      to: mailOptions.to,
+      subject: mailOptions.subject,
+      pdfUrl: pdfUrl.substring(0, 100) + "...",
     })
+
+    console.log("📤 Sending email...")
+    const result = await transporter.sendMail(mailOptions)
+    console.log("✅ Email sent successfully:", result.messageId)
+
+    return new Response(
+      JSON.stringify({
+        success: true,
+        message: "Email sent successfully",
+        messageId: result.messageId,
+      }),
+      {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      },
+    )
   } catch (error: any) {
     console.error("❌ Email sending failed:", error)
+    console.error("❌ Error stack:", error.stack)
+
     return new Response(
       JSON.stringify({
         error: "Failed to send email.",
         details: error.message,
+        stack: error.stack,
       }),
       {
         status: 500,

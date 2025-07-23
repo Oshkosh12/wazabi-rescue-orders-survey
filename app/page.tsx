@@ -549,13 +549,14 @@ export default function ProductSurvey() {
         }),
       })
 
+      const responseData = await res.json()
+      console.log("📧 Email API response:", responseData)
+
       if (!res.ok) {
-        const errorData = await res.json()
-        console.error("❌ Email sending failed:", errorData)
-        throw new Error(errorData.error || `HTTP ${res.status}`)
+        console.error("❌ Email sending failed:", res.status, responseData)
+        throw new Error(responseData.error || `HTTP ${res.status}`)
       }
 
-      const responseData = await res.json()
       console.log("✅ Email sent successfully")
       toast("PDF sent to admin successfully!")
     } catch (err) {

@@ -256,7 +256,6 @@ export default function ProductSurvey() {
   const [isLoading, setIsLoading] = useState(false)
   const [showToast, setShowToast] = useState(false)
   const [toastMessage, setToastMessage] = useState("")
-  // Removed client-side orderNumber state
 
   // Form fields
   const [formData, setFormData] = useState({
@@ -276,9 +275,6 @@ export default function ProductSurvey() {
         setCustomerType(parsed.customerType || "")
         setLocationCount(parsed.locationCount || 0)
         setSelectedProducts(parsed.selectedProducts || {})
-        // Removed orderNumber from parsed state
-        // Note: Files cannot be directly saved/restored from localStorage
-        // The file inputs will need to be re-selected by the user if they refresh
         setFormData(
           parsed.formData || {
             name: "",
@@ -288,7 +284,6 @@ export default function ProductSurvey() {
         )
       } catch (error) {
         console.error("Error loading saved state:", error)
-        // If error, clear corrupted state and start fresh
         localStorage.removeItem("wazabi-survey-state")
         setCurrentStep(0)
       }
@@ -303,10 +298,9 @@ export default function ProductSurvey() {
       customerType,
       locationCount,
       selectedProducts,
-      // Removed orderNumber from stateToSave
       formData: {
         ...formData,
-        einFile: null, // Don't save files to localStorage, as they are not serializable
+        einFile: null,
         taxFile: null,
       },
     }
@@ -364,29 +358,27 @@ export default function ProductSurvey() {
         const dataURL = canvas.toDataURL("image/png")
         resolve(dataURL)
       }
-      img.onerror = () => resolve("") // fallback to empty if fails
+      img.onerror = () => resolve("")
       img.src = url
     })
   }
 
   const generatePDF = async (orderNumber: number, invoiceId: string) => {
-    // Dynamic import to avoid SSR issues
     const jsPDF = (await import("jspdf")).default
     const html2canvas = (await import("html2canvas")).default
 
     const formattedOrderNumber = String(orderNumber).padStart(3, "0")
 
-    // Create a hidden div to render the invoice HTML
     const invoiceContainer = document.createElement("div")
     invoiceContainer.id = "invoice-template"
-    invoiceContainer.style.width = "210mm" // A4 width
+    invoiceContainer.style.width = "210mm"
     invoiceContainer.style.padding = "10mm"
     invoiceContainer.style.fontFamily = "sans-serif"
-    invoiceContainer.style.fontSize = "10px" // Base font size for scaling
+    invoiceContainer.style.fontSize = "10px"
     invoiceContainer.style.color = "#000"
     invoiceContainer.style.background = "#fff"
     invoiceContainer.style.position = "absolute"
-    invoiceContainer.style.left = "-9999px" // Hide it off-screen
+    invoiceContainer.style.left = "-9999px"
     invoiceContainer.style.top = "-9999px"
 
     const orderDate = new Date().toLocaleDateString("en-US", {
@@ -470,12 +462,12 @@ export default function ProductSurvey() {
       scrollY: -window.scrollY,
       backgroundColor: "#ffffff",
       windowWidth: invoiceContainer.scrollWidth,
-    }) // Scale for better resolution
+    })
     const imgData = canvas.toDataURL("image/png")
 
     const pdf = new jsPDF("p", "mm", "a4")
-    const imgWidth = 210 // A4 width in mm
-    const pageHeight = 297 // A4 height in mm
+    const imgWidth = 210
+    const pageHeight = 297
     const imgHeight = (canvas.height * imgWidth) / canvas.width
     let heightLeft = imgHeight
     let position = 0
@@ -490,31 +482,52 @@ export default function ProductSurvey() {
       heightLeft -= pageHeight
     }
 
-    document.body.removeChild(invoiceContainer) // Clean up the hidden div
+    document.body.removeChild(invoiceContainer)
 
     return pdf
   }
 
   const sendEmailWithPDF = async (pdfBlob: Blob, orderNumber: number) => {
-    const formData = new FormData()
-    formData.append("pdf", pdfBlob, `invoice-${String(orderNumber).padStart(3, "0")}.pdf`)
-    formData.append("orderId", String(orderNumber).padStart(3, "0"))
-
     try {
-      console.log("📧 Sending email with PDF...")
-      const res = await fetch("/api/invoices/send-invoices", {
+      console.log("📧 Uploading PDF...")
+
+      // First upload the PDF to get a URL
+      const uploadFormData = new FormData()
+      uploadFormData.append("pdf", pdfBlob, `invoice-${String(orderNumber).padStart(3, "0")}.pdf`)
+
+      const uploadRes = await fetch("/api/upload-pdf", {
         method: "POST",
-        body: formData,
+        body: uploadFormData,
       })
 
-      const responseData = await res.json()
+      if (!uploadRes.ok) {
+        const uploadError = await uploadRes.json()
+        throw new Error(`PDF upload failed: ${uploadError.error}`)
+      }
 
-      if (res.ok) {
+      const uploadData = await uploadRes.json()
+      console.log("✅ PDF uploaded successfully")
+
+      // Now send the email with the PDF URL
+      const emailRes = await fetch("/api/invoices/send-invoices", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          pdfUrl: uploadData.pdfUrl,
+          orderId: String(orderNumber).padStart(3, "0"),
+        }),
+      })
+
+      const emailData = await emailRes.json()
+
+      if (emailRes.ok) {
         console.log("✅ Email sent successfully")
         toast("PDF sent to admin successfully!")
       } else {
-        console.error("❌ Email sending failed:", responseData)
-        toast(`Failed to send PDF: ${responseData.error || "Unknown error"}`)
+        console.error("❌ Email sending failed:", emailData)
+        toast(`Failed to send PDF: ${emailData.error || "Unknown error"}`)
       }
     } catch (err) {
       console.error("❌ Error sending PDF:", err)
@@ -555,12 +568,12 @@ export default function ProductSurvey() {
   }
 
   const updateProductPrice = (productId: number, price: string) => {
-    const cleanPrice = price.replace(/^0+(?=\d)/, "") // Remove leading zeros
+    const cleanPrice = price.replace(/^0+(?=\d)/, "")
     setSelectedProducts((prev) => ({
       ...prev,
       [productId]: {
         ...prev[productId],
-        price: cleanPrice, // store as plain string like "12.50"
+        price: cleanPrice,
       },
     }))
   }
@@ -606,14 +619,9 @@ export default function ProductSurvey() {
   }
 
   const handleSubmit = async () => {
-    // Validation
-    const requiredFields = ["name", "email", "phone", "address", "city", "state", "zip", "rep"]
-    const missingFields = requiredFields.filter((field) => !formData[field as keyof typeof formData])
-
     setIsLoading(true)
 
     try {
-      // Prepare data for API submission
       const submissionData = {
         thcALegal,
         customerType,
@@ -624,7 +632,6 @@ export default function ProductSurvey() {
         selectedProducts,
       }
 
-      // Send data to API route
       const response = await fetch("/api/invoices", {
         method: "POST",
         headers: {
@@ -639,26 +646,20 @@ export default function ProductSurvey() {
       }
 
       const responseData = await response.json()
-      const { id: invoiceId, orderNumber } = responseData // Capture generated ID and orderNumber
+      const { id: invoiceId, orderNumber } = responseData
 
-      // Generate PDF
-      const pdf = await generatePDF(orderNumber, invoiceId) // Pass generated values
+      const pdf = await generatePDF(orderNumber, invoiceId)
 
-      // Download PDF
       pdf.save(`Wazabi_Order_${String(orderNumber).padStart(3, "0")}_${new Date().toISOString().split("T")[0]}.pdf`)
 
-      // Convert PDF to blob for email
       const pdfBlob = pdf.output("blob")
 
-      // Send email with PDF
       await sendEmailWithPDF(pdfBlob, orderNumber)
 
-      // Simulate order processing
       await new Promise((resolve) => setTimeout(resolve, 2000))
 
       toast("Order placed successfully! PDF downloaded and sent to email.")
 
-      // Clear localStorage and reset form
       localStorage.removeItem("wazabi-survey-state")
       setCurrentStep(0)
       setSelectedProducts({})
@@ -689,7 +690,6 @@ export default function ProductSurvey() {
   }
 
   const renderStep = () => {
-    // Splash Screen
     if (currentStep === 0) {
       return (
         <div className="flex flex-col items-center justify-center h-full">
@@ -702,7 +702,6 @@ export default function ProductSurvey() {
       )
     }
 
-    // THC-A Legal Question
     if (currentStep === 1) {
       return (
         <div className="flex flex-col items-center justify-center h-full text-center px-0">
@@ -740,19 +739,15 @@ export default function ProductSurvey() {
       )
     }
 
-    // Customer Type Selection
     if (currentStep === 2) {
       return (
         <div className="flex flex-col items-center justify-center h-full text-center px-0">
           <h2 className="text-xl text-gray-700 mb-6">Select Customer Type</h2>
           <div className="flex flex-wrap justify-center gap-4 mb-4">
-            {" "}
-            {/* Changed gap and added flex-wrap */}
             <div
               onClick={() => selectCustomerType("Store")}
               id="type-store"
               className={`cursor-pointer border-2 rounded-xl p-6 hover:border-green-500 w-[calc(50%-0.5rem)] md:w-40 text-center ${
-                /* Adjusted width */
                 customerType === "Store" ? "border-green-500" : "border-gray-300"
               }`}
             >
@@ -780,7 +775,6 @@ export default function ProductSurvey() {
               onClick={() => selectCustomerType("Wholesale")}
               id="type-wholesale"
               className={`cursor-pointer border-2 rounded-xl p-6 hover:border-green-500 w-[calc(50%-0.5rem)] md:w-40 text-center ${
-                /* Adjusted width */
                 customerType === "Wholesale" ? "border-green-500" : "border-gray-300"
               }`}
             >
@@ -886,11 +880,10 @@ export default function ProductSurvey() {
               value={locationCount || ""}
               onChange={(e) => setLocationCount(Number.parseInt(e.target.value) || 0)}
               onKeyDown={(e) => {
-                // Added onKeyDown for Enter
                 if (e.key === "Enter") {
                   e.preventDefault()
-                  ;(e.target as HTMLInputElement).blur() // Blur to trigger onChange if value changed
-                  handleNext() // Attempt to move to next step
+                  ;(e.target as HTMLInputElement).blur()
+                  handleNext()
                 }
               }}
               className="w-48 mx-auto p-3 border rounded-xl shadow-sm"
@@ -900,7 +893,6 @@ export default function ProductSurvey() {
       )
     }
 
-    // Product Selection
     if (currentStep >= 3 && currentStep < products.length + 2) {
       const product = products[currentStep - 3]
       const isSelected = selectedProducts[product.id]
@@ -930,11 +922,10 @@ export default function ProductSurvey() {
                   pattern="^\d+(\.\d{1,2})?$"
                   value={selectedProducts[product.id].price}
                   onFocus={(e) => {
-                    e.target.select() // auto-selects the entire value like "0.00"
+                    e.target.select()
                   }}
                   onChange={(e) => {
                     const raw = e.target.value
-                    // Allow only digits and one optional decimal with up to 2 digits
                     if (/^\d*\.?\d{0,2}$/.test(raw)) {
                       updateProductPrice(product.id, raw)
                     }
@@ -982,7 +973,6 @@ export default function ProductSurvey() {
                         onChange={(e) => {
                           if (isSelected) {
                             const valStr = e.target.value
-                            // Remove leading zeros unless the value is just "0"
                             let val = 0
                             if (valStr === "") {
                               val = 0
@@ -1000,14 +990,13 @@ export default function ProductSurvey() {
                           }
                         }}
                         onKeyDown={(e) => {
-                          // Re-verified and confirmed this logic
                           if (e.key === "Enter") {
                             e.preventDefault()
                             const val = Number.parseInt((e.target as HTMLInputElement).value) || 0
                             if (isSelected) {
                               updateVariantQuantity(product.id, variant.name, val)
                             }
-                            ;(e.target as HTMLInputElement).blur() // Blur to ensure value is registered
+                            ;(e.target as HTMLInputElement).blur()
                           }
                         }}
                         className="variant-qty no-spinner border rounded w-14 text-center text-xs px-1 py-1"
@@ -1033,7 +1022,6 @@ export default function ProductSurvey() {
       )
     }
 
-    // Order Summary and Form
     return (
       <div className="space-y-4">
         <h2 className="text-2xl font-bold mb-6 text-center text-gray-700">Place Your Order</h2>
@@ -1041,7 +1029,6 @@ export default function ProductSurvey() {
           THC-A Legal in State: <strong>{thcALegal ? "Yes" : "No"}</strong>
         </p>
 
-        {/* Order Summary */}
         <div className="space-y-4 mb-8">
           {Object.values(selectedProducts).map((product) => {
             const price = Number.parseFloat(product.price.replace("$", ""))
@@ -1097,7 +1084,6 @@ export default function ProductSurvey() {
 
         <div className="text-right font-bold text-lg text-green-600 mb-6">Total: ${calculateTotal().toFixed(2)}</div>
 
-        {/* Customer Form */}
         <label className="block font-semibold mb-2 text-gray-700">Bill To:</label>
         <input
           type="text"
@@ -1153,7 +1139,6 @@ export default function ProductSurvey() {
 
   return (
     <div className="h-screen bg-gradient-to-br from-green-100 to-blue-100 flex items-center justify-center overflow-hidden">
-      {/* Toast */}
       {showToast && (
         <div
           className="fixed top-4 left-1/2 transform -translate-x-1/2 w-full max-w-lg text-white text-center px-4 py-2 rounded shadow z-50"
@@ -1164,7 +1149,6 @@ export default function ProductSurvey() {
       )}
 
       <div className="bg-white shadow-2xl rounded-2xl p-6 w-full max-w-4xl h-[670px] md:h-[670px] sm:h-[560px] relative flex flex-col overflow-hidden">
-        {/* Progress Bar with Restart Button */}
         {currentStep > 0 && (
           <div className="step-dots mb-6 mt-4 relative flex justify-between flex-shrink-0">
             <div className="absolute top-1/2 left-0 w-full h-0.5 bg-red-200 transform -translate-y-1/2 z-0"></div>
@@ -1185,7 +1169,6 @@ export default function ProductSurvey() {
               />
             ))}
 
-            {/* Restart Button */}
             <button
               onClick={handleRestart}
               className="absolute -top-2 -right-2 p-2 bg-red-600 text-white rounded-full hover:bg-red-700 transition-colors z-30"
@@ -1196,14 +1179,10 @@ export default function ProductSurvey() {
           </div>
         )}
 
-        {/* Step Content */}
         <div className="flex-1 overflow-y-auto">{renderStep()}</div>
 
-        {/* Navigation Buttons */}
         {shouldShowNavButtons() && (
           <div className="flex justify-between mt-6 pb-1 flex-shrink-0 relative z-50">
-            {" "}
-            {/* Added relative z-50 */}
             {shouldShowBackButton() && (
               <button
                 onClick={handleBack}
@@ -1223,7 +1202,6 @@ export default function ProductSurvey() {
           </div>
         )}
 
-        {/* Loading Overlay */}
         {isLoading && (
           <div className="fixed inset-0 bg-white bg-opacity-80 z-50 flex items-center justify-center">
             <div className="flex flex-col items-center">

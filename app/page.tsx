@@ -348,32 +348,17 @@ export default function ProductSurvey() {
   const convertImageToBase64 = (url: string): Promise<string> => {
     return new Promise((resolve, reject) => {
       const img = new Image()
-      img.crossOrigin = "anonymous"
+      img.crossOrigin = "Anonymous"
       img.onload = () => {
-        try {
-          const canvas = document.createElement("canvas")
-          canvas.width = Math.min(img.width, 200) // Limit size to reduce PDF size
-          canvas.height = Math.min(img.height, 200)
-          const ctx = canvas.getContext("2d")
-          if (ctx) {
-            // Scale image to fit canvas
-            const scale = Math.min(canvas.width / img.width, canvas.height / img.height)
-            const scaledWidth = img.width * scale
-            const scaledHeight = img.height * scale
-            const x = (canvas.width - scaledWidth) / 2
-            const y = (canvas.height - scaledHeight) / 2
-
-            ctx.drawImage(img, x, y, scaledWidth, scaledHeight)
-            const dataURL = canvas.toDataURL("image/jpeg", 0.8)
-            resolve(dataURL)
-          } else {
-            reject(new Error("Could not get canvas context"))
-          }
-        } catch (error) {
-          reject(error)
-        }
+        const canvas = document.createElement("canvas")
+        canvas.width = img.width
+        canvas.height = img.height
+        const ctx = canvas.getContext("2d")
+        ctx?.drawImage(img, 0, 0)
+        const dataURL = canvas.toDataURL("image/png")
+        resolve(dataURL)
       }
-      img.onerror = () => reject(new Error(`Failed to load image: ${url}`))
+      img.onerror = () => resolve("")
       img.src = url
     })
   }
@@ -389,7 +374,7 @@ export default function ProductSurvey() {
     invoiceContainer.style.width = "210mm"
     invoiceContainer.style.padding = "10mm"
     invoiceContainer.style.fontFamily = "Arial, sans-serif"
-    invoiceContainer.style.fontSize = "12px"
+    invoiceContainer.style.fontSize = "12px" // Increased from 10px
     invoiceContainer.style.color = "#000"
     invoiceContainer.style.background = "#fff"
     invoiceContainer.style.position = "absolute"
@@ -404,38 +389,20 @@ export default function ProductSurvey() {
 
     let itemsHtml = ""
 
-    // Load actual product images
+    // Optimize images - use smaller placeholder images instead of converting large images
     for (const product of Object.values(selectedProducts)) {
       for (const [variant, qty] of Object.entries(product.variantsSelected)) {
         if (qty > 0) {
-          // Find the variant image or use product image as fallback
-          const variantData = product.variants.find((v) => v.name === variant)
-          const imageUrl = variantData?.image || product.image
-
-          // Convert image to base64 for PDF
-          let imageBase64 = ""
-          try {
-            imageBase64 = await convertImageToBase64(imageUrl)
-          } catch (error) {
-            console.warn("Failed to load image:", imageUrl, error)
-            // Fallback to colored placeholder if image fails to load
-            const colorHash = variant.split("").reduce((a, b) => {
-              a = (a << 5) - a + b.charCodeAt(0)
-              return a & a
-            }, 0)
-            const color = `hsl(${Math.abs(colorHash) % 360}, 70%, 80%)`
-            imageBase64 = `<div style="width: 50px; height: 50px; background: ${color}; border-radius: 4px; display: flex; align-items: center; justify-content: center; font-size: 10px; color: #666;">IMG</div>`
-          }
-
-          const imageElement = imageBase64.startsWith("data:")
-            ? `<img src="${imageBase64}" style="width: 50px; height: 50px; object-fit: cover; border-radius: 4px;" alt="${variant}" />`
-            : imageBase64
+          // Use a simple colored box instead of actual images to reduce PDF size
+          const colorHash = variant.split("").reduce((a, b) => {
+            a = (a << 5) - a + b.charCodeAt(0)
+            return a & a
+          }, 0)
+          const color = `hsl(${Math.abs(colorHash) % 360}, 70%, 80%)`
 
           itemsHtml += `
           <div class="break-inside-avoid" style="display: flex; align-items: center; margin-bottom: 10px; padding: 8px; border: 1px solid #eee;">
-            <div style="margin-right: 10px;">
-              ${imageElement}
-            </div>
+            <div style="width: 50px; height: 50px; background: ${color}; margin-right: 10px; border-radius: 4px; display: flex; align-items: center; justify-content: center; font-size: 10px; color: #666;">IMG</div>
             <div style="flex-grow: 1;">
               <div style="font-weight: bold; font-size: 11px;">${product.name}</div>
               <div style="color: #555; font-size: 10px;">${variant}</div>
@@ -495,22 +462,19 @@ export default function ProductSurvey() {
 
     document.body.appendChild(invoiceContainer)
 
-    // Wait a bit for images to load
-    await new Promise((resolve) => setTimeout(resolve, 1000))
-
     // Use lower scale and quality settings to reduce file size
     const canvas = await html2canvas(invoiceContainer, {
-      scale: 1.5, // Slightly higher for better image quality
+      scale: 1, // Reduced from 2
       scrollY: -window.scrollY,
       backgroundColor: "#ffffff",
       windowWidth: invoiceContainer.scrollWidth,
       useCORS: true,
       allowTaint: true,
-      imageTimeout: 5000, // Increased timeout for image loading
-      logging: false,
+      imageTimeout: 0,
+      logging: false, // Disable logging
     })
 
-    const imgData = canvas.toDataURL("image/jpeg", 0.85) // Slightly higher quality for images
+    const imgData = canvas.toDataURL("image/jpeg", 0.8) // Use JPEG with 80% quality instead of PNG
 
     const pdf = new jsPDF("p", "mm", "a4")
     const imgWidth = 210
@@ -519,7 +483,7 @@ export default function ProductSurvey() {
     let heightLeft = imgHeight
     let position = 0
 
-    pdf.addImage(imgData, "JPEG", 0, position, imgWidth, imgHeight, undefined, "FAST")
+    pdf.addImage(imgData, "JPEG", 0, position, imgWidth, imgHeight, undefined, "FAST") // Use JPEG compression
     heightLeft -= pageHeight
 
     while (heightLeft > 0) {

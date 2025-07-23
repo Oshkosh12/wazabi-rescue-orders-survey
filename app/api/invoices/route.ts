@@ -36,7 +36,7 @@ export async function POST(request: Request) {
       ])
       .select("id, order_number") // Select the generated id and order_number
 
-    if (error) {
+    if (error) { 
       console.error("Error inserting data:", error)
       return NextResponse.json({ error: error.message }, { status: 500 })
     }

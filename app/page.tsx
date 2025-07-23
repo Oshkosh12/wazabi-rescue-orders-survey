@@ -373,8 +373,8 @@ export default function ProductSurvey() {
     invoiceContainer.id = "invoice-template"
     invoiceContainer.style.width = "210mm"
     invoiceContainer.style.padding = "10mm"
-    invoiceContainer.style.fontFamily = "sans-serif"
-    invoiceContainer.style.fontSize = "10px"
+    invoiceContainer.style.fontFamily = "Arial, sans-serif"
+    invoiceContainer.style.fontSize = "12px" // Increased from 10px
     invoiceContainer.style.color = "#000"
     invoiceContainer.style.background = "#fff"
     invoiceContainer.style.position = "absolute"
@@ -389,81 +389,92 @@ export default function ProductSurvey() {
 
     let itemsHtml = ""
 
+    // Optimize images - use smaller placeholder images instead of converting large images
     for (const product of Object.values(selectedProducts)) {
       for (const [variant, qty] of Object.entries(product.variantsSelected)) {
         if (qty > 0) {
-          const variantImageUrl = (product.variants.find((v) => v.name === variant) || {}).image || product.image
-          const base64Image = await convertImageToBase64(variantImageUrl)
+          // Use a simple colored box instead of actual images to reduce PDF size
+          const colorHash = variant.split("").reduce((a, b) => {
+            a = (a << 5) - a + b.charCodeAt(0)
+            return a & a
+          }, 0)
+          const color = `hsl(${Math.abs(colorHash) % 360}, 70%, 80%)`
 
           itemsHtml += `
-        <div class="break-inside-avoid" style="display: flex; align-items: center; margin-bottom: 10px;">
-          <img src="${base64Image}" style="width: 60px; height: 60px; object-fit: cover; margin-right: 10px; border-radius: 4px;">
-          <div style="flex-grow: 1;">
-            <div style="font-weight: bold;">${product.name}</div>
-            <div style="color: #555;">${variant}</div>
+          <div class="break-inside-avoid" style="display: flex; align-items: center; margin-bottom: 10px; padding: 8px; border: 1px solid #eee;">
+            <div style="width: 50px; height: 50px; background: ${color}; margin-right: 10px; border-radius: 4px; display: flex; align-items: center; justify-content: center; font-size: 10px; color: #666;">IMG</div>
+            <div style="flex-grow: 1;">
+              <div style="font-weight: bold; font-size: 11px;">${product.name}</div>
+              <div style="color: #555; font-size: 10px;">${variant}</div>
+            </div>
+            <div style="text-align: right;">
+              <div style="font-weight: bold;">${qty}</div>
+              <div style="font-size: 9px; color: #777;">${product.price} each</div>
+              <div style="font-weight: bold;">$${(Number.parseFloat(product.price.replace("$", "")) * qty).toFixed(2)}</div>
+            </div>
           </div>
-          <div style="text-align: right;">
-            <div style="font-weight: bold;">${qty}</div>
-            <div style="font-size: 9px; color: #777;">${product.price} each</div>
-            <div style="font-weight: bold;">$${(Number.parseFloat(product.price.replace("$", "")) * qty).toFixed(2)}</div>
-          </div>
-        </div>
-      `
+        `
         }
       }
     }
 
     invoiceContainer.innerHTML = `
-    <div style="display: flex; justify-content: space-between; margin-bottom: 20px;">
+    <div style="display: flex; justify-content: space-between; margin-bottom: 20px; padding-bottom: 10px; border-bottom: 2px solid #333;">
       <div style="font-size: 24px; font-weight: bold;">Invoice #${formattedOrderNumber}</div>
       <div style="text-align: right;">
-        <div>Order ID: ${invoiceId}</div>
-        <div>Date: ${orderDate}</div> 
+        <div style="font-size: 12px;">Order ID: ${invoiceId}</div>
+        <div style="font-size: 12px;">Date: ${orderDate}</div> 
       </div>
     </div>
 
-    <div style="display: flex; justify-content: space-between; margin-bottom: 20px;">
-      <div style="width: 100%;">
-        <div style="font-weight: bold; margin-bottom: 5px; color: #333;">CUSTOMER DETAILS</div>
-        <div>Bill To: ${formData.name}</div>
-        <div>Ship To: ${formData.email}</div>
-        <div>Sales Rep: ${formData.rep || "N/A"}</div>
-        <div>Customer Type: ${customerType}</div>
-        <div>Number of Locations: ${locationCount}</div>
-        <div>THC-A Legal in State: ${thcALegal ? "Yes" : "No"}</div>
+    <div style="margin-bottom: 20px;">
+      <div style="font-weight: bold; margin-bottom: 10px; color: #333; font-size: 14px;">CUSTOMER DETAILS</div>
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+        <div>
+          <div><strong>Bill To:</strong> ${formData.name}</div>
+          <div><strong>Ship To:</strong> ${formData.email}</div>
+          <div><strong>Sales Rep:</strong> ${formData.rep || "N/A"}</div>
+        </div>
+        <div>
+          <div><strong>Customer Type:</strong> ${customerType}</div>
+          <div><strong>Locations:</strong> ${locationCount}</div>
+          <div><strong>THC-A Legal:</strong> ${thcALegal ? "Yes" : "No"}</div>
+        </div>
       </div>
     </div>
 
-    <hr style="border-top: 1px solid grey; margin-top: 50px; margin-bottom: 50px;">
-
-    <div id="invoice-items" style="margin-top:-60px;">
+    <div style="margin: 20px 0;">
+      <div style="font-weight: bold; margin-bottom: 10px; color: #333; font-size: 14px;">ORDER ITEMS</div>
       ${itemsHtml}
     </div>
 
-    <div style="display: flex; justify-content: flex-end; margin-top: 20px; font-size: 14px; font-weight: bold;">
-      Total: $${calculateTotal().toFixed(2)}
+    <div style="display: flex; justify-content: flex-end; margin-top: 20px; padding-top: 10px; border-top: 2px solid #333;">
+      <div style="font-size: 16px; font-weight: bold;">Total: $${calculateTotal().toFixed(2)}</div>
     </div>
 
-    <hr style="border-top: 1px solid black; margin-top: 20px; margin-bottom: 20px;">
-
-    <div style="text-align: center; margin-top: 40px; margin-bottom: 20px;">
-      <div>Thank you for shopping with us!</div>
-      <div style="font-weight: bold; margin-top: 10px;">Flying Brands</div>
-      <div>5800 Corporate Drive, Ste D1, Houston TX 77036, United States</div>
-      <div>info@wazabilabs.com</div>
-      <div>wazabilabs.com</div>
+    <div style="text-align: center; margin-top: 40px; padding-top: 20px; border-top: 1px solid #ccc;">
+      <div style="font-weight: bold; margin-bottom: 5px;">Flying Brands</div>
+      <div style="font-size: 11px;">5800 Corporate Drive, Ste D1, Houston TX 77036, United States</div>
+      <div style="font-size: 11px;">info@wazabilabs.com | wazabilabs.com</div>
+      <div style="font-size: 11px; margin-top: 10px;">Thank you for your business!</div>
     </div>
   `
 
     document.body.appendChild(invoiceContainer)
 
+    // Use lower scale and quality settings to reduce file size
     const canvas = await html2canvas(invoiceContainer, {
-      scale: 2,
+      scale: 1, // Reduced from 2
       scrollY: -window.scrollY,
       backgroundColor: "#ffffff",
       windowWidth: invoiceContainer.scrollWidth,
+      useCORS: true,
+      allowTaint: true,
+      imageTimeout: 0,
+      logging: false, // Disable logging
     })
-    const imgData = canvas.toDataURL("image/png")
+
+    const imgData = canvas.toDataURL("image/jpeg", 0.8) // Use JPEG with 80% quality instead of PNG
 
     const pdf = new jsPDF("p", "mm", "a4")
     const imgWidth = 210
@@ -472,13 +483,13 @@ export default function ProductSurvey() {
     let heightLeft = imgHeight
     let position = 0
 
-    pdf.addImage(imgData, "PNG", 0, position, imgWidth, imgHeight)
+    pdf.addImage(imgData, "JPEG", 0, position, imgWidth, imgHeight, undefined, "FAST") // Use JPEG compression
     heightLeft -= pageHeight
 
     while (heightLeft > 0) {
       position = -(imgHeight - heightLeft)
       pdf.addPage()
-      pdf.addImage(imgData, "PNG", 0, position, imgWidth, imgHeight)
+      pdf.addImage(imgData, "JPEG", 0, position, imgWidth, imgHeight, undefined, "FAST")
       heightLeft -= pageHeight
     }
 
@@ -489,10 +500,20 @@ export default function ProductSurvey() {
 
   const uploadPDFToStorage = async (pdfBlob: Blob, orderNumber: number) => {
     try {
+      console.log(`📊 PDF size: ${(pdfBlob.size / 1024 / 1024).toFixed(2)} MB`)
+
+      // Check if PDF is too large (limit to 5MB)
+      if (pdfBlob.size > 5 * 1024 * 1024) {
+        console.error("❌ PDF too large:", pdfBlob.size)
+        throw new Error("PDF file too large. Please try again.")
+      }
+
       const formData = new FormData()
       const fileName = `invoice-${String(orderNumber).padStart(3, "0")}-${Date.now()}.pdf`
       formData.append("pdf", pdfBlob, fileName)
       formData.append("orderNumber", String(orderNumber))
+
+      console.log("📤 Uploading PDF to storage...")
 
       const response = await fetch("/api/invoices/upload-pdf", {
         method: "POST",
@@ -500,13 +521,16 @@ export default function ProductSurvey() {
       })
 
       if (!response.ok) {
-        throw new Error(`Upload failed: ${response.status}`)
+        const errorText = await response.text()
+        console.error("❌ Upload failed:", response.status, errorText)
+        throw new Error(`Upload failed: ${response.status} - ${errorText}`)
       }
 
       const result = await response.json()
+      console.log("✅ Upload successful:", result.pdfUrl)
       return result.pdfUrl
     } catch (error) {
-      console.error("Error uploading PDF:", error)
+      console.error("❌ Error uploading PDF:", error)
       return null
     }
   }

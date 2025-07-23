@@ -487,51 +487,32 @@ export default function ProductSurvey() {
     return pdf
   }
 
-  const sendEmailWithPDF = async (pdfBlob: Blob, orderNumber: number) => {
+  const sendEmailWithPDF = async (pdfUrl: string, orderNumber: number) => {
     try {
-      console.log("📧 Uploading PDF...")
-
-      // First upload the PDF to get a URL
-      const uploadFormData = new FormData()
-      uploadFormData.append("pdf", pdfBlob, `invoice-${String(orderNumber).padStart(3, "0")}.pdf`)
-
-      const uploadRes = await fetch("/api/upload-pdf", {
-        method: "POST",
-        body: uploadFormData,
-      })
-
-      if (!uploadRes.ok) {
-        const uploadError = await uploadRes.json()
-        throw new Error(`PDF upload failed: ${uploadError.error}`)
-      }
-
-      const uploadData = await uploadRes.json()
-      console.log("✅ PDF uploaded successfully")
-
-      // Now send the email with the PDF URL
-      const emailRes = await fetch("/api/invoices/send-invoices", {
+      console.log("📧 Sending email with PDF URL...")
+      const res = await fetch("/api/invoices/send-invoices", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          pdfUrl: uploadData.pdfUrl,
+          pdfUrl: pdfUrl,
           orderId: String(orderNumber).padStart(3, "0"),
         }),
       })
 
-      const emailData = await emailRes.json()
-
-      if (emailRes.ok) {
-        console.log("✅ Email sent successfully")
-        toast("PDF sent to admin successfully!")
-      } else {
-        console.error("❌ Email sending failed:", emailData)
-        toast(`Failed to send PDF: ${emailData.error || "Unknown error"}`)
+      if (!res.ok) {
+        const errorData = await res.json()
+        console.error("❌ Email sending failed:", errorData)
+        throw new Error(errorData.error || `HTTP ${res.status}`)
       }
+
+      const responseData = await res.json()
+      console.log("✅ Email sent successfully")
+      toast("PDF sent to admin successfully!")
     } catch (err) {
       console.error("❌ Error sending PDF:", err)
-      toast("Error sending PDF.")
+      toast(`Error sending PDF: ${err instanceof Error ? err.message : "Unknown error"}`)
     }
   }
 
@@ -622,6 +603,10 @@ export default function ProductSurvey() {
     setIsLoading(true)
 
     try {
+      // Generate PDF first
+      const pdf = await generatePDF(0, "temp") // Temporary values
+      const pdfDataUrl = pdf.output("dataurlstring")
+
       const submissionData = {
         thcALegal,
         customerType,
@@ -630,6 +615,7 @@ export default function ProductSurvey() {
           ...formData,
         },
         selectedProducts,
+        pdfData: pdfDataUrl, // Include PDF data
       }
 
       const response = await fetch("/api/invoices", {
@@ -646,15 +632,17 @@ export default function ProductSurvey() {
       }
 
       const responseData = await response.json()
-      const { id: invoiceId, orderNumber } = responseData
+      const { id: invoiceId, orderNumber, pdfUrl } = responseData
 
-      const pdf = await generatePDF(orderNumber, invoiceId)
-
+      // Download PDF for user
       pdf.save(`Wazabi_Order_${String(orderNumber).padStart(3, "0")}_${new Date().toISOString().split("T")[0]}.pdf`)
 
-      const pdfBlob = pdf.output("blob")
-
-      await sendEmailWithPDF(pdfBlob, orderNumber)
+      // Send email with PDF URL if available
+      if (pdfUrl) {
+        await sendEmailWithPDF(pdfUrl, orderNumber)
+      } else {
+        toast("Order saved but PDF upload failed. Please contact support.")
+      }
 
       await new Promise((resolve) => setTimeout(resolve, 2000))
 

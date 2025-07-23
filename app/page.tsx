@@ -496,31 +496,25 @@ for (const product of Object.values(selectedProducts)) {
     return pdf
   }
 
-  const sendEmailWithPdfUrl = async (pdfUrl: string) => {
-    console.log("🔄 Sending PDF URL to API endpoint...")
-    try {
-      const res = await fetch("/api/send-invoices", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ pdfUrl }),
-      })
+ const sendEmailWithPDF = async (pdfBlob: Blob) => {
+  const formData = new FormData();
+  formData.append("pdf", pdfBlob, "invoice.pdf");
 
-      if (res.ok) {
-        const responseData = await res.json()
-        console.log(`🔄 API response status: ${res.status}`, responseData)
-        toast("Order notification sent to admin successfully!")
-      } else {
-        const errorData = await res.json()
-        console.error(`🔄 API error: Status ${res.status}`, errorData)
-        toast(`Failed to send order notification: ${errorData.error || res.statusText}`, "#ef4444")
-      }
-    } catch (err) {
-      console.error("🔄 Fetch error:", err)
-      toast(`Error sending notification: ${err instanceof Error ? err.message : "Unknown error"}`)
+  try {
+    const res = await fetch("/api/send-invoices", {
+      method: "POST",
+      body: formData,
+    });
+    if (res.ok) {
+      toast("PDF sent to admin successfully!");
+    } else {
+      toast("Failed to send PDF.");
     }
+  } catch (err) {
+    console.error(err);
+    toast("Error sending PDF.");
   }
+};
 
 
   const handleProductSelect = (productId: number) => {

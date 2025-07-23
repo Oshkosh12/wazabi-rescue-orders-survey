@@ -1,58 +1,73 @@
 import { NextResponse } from "next/server"
 import { supabase } from "@/lib/supabase"
 
-export const runtime = "nodejs"
-
 export async function POST(request: Request) {
   try {
-    const formData = await request.formData()
-    const pdfFile = formData.get("pdf") as File
-    const orderNumber = formData.get("orderNumber") as string
+    const data = await request.json()
 
-    if (!pdfFile) {
-      return NextResponse.json({ error: "No PDF file provided" }, { status: 400 })
-    }
-
-    // Create filename
-    const fileName = `invoice-${String(orderNumber).padStart(3, "0")}-${Date.now()}.pdf`
-
-    // Convert file to buffer
-    const pdfBuffer = Buffer.from(await pdfFile.arrayBuffer())
-
-    // Upload to Supabase Storage
-    const { data: uploadData, error: uploadError } = await supabase.storage
+    // Fetch the current maximum order_number and increment it
+    const { data: maxOrder, error: maxError } = await supabase
       .from("invoices")
-      .upload(fileName, pdfBuffer, {
-        contentType: "application/pdf",
-        upsert: false,
-      })
+      .select("order_number")
+      .order("order_number", { ascending: false })
+      .limit(1)
+      .single()
 
-    if (uploadError) {
-      console.error("Error uploading PDF:", uploadError)
-      return NextResponse.json({ error: "Failed to upload PDF" }, { status: 500 })
+    if (maxError && maxError.code !== "PGRST116") {
+      // PGRST116 means no rows found (table is empty)
+      console.error("Error fetching max order number:", maxError)
+      return NextResponse.json({ error: maxError.message }, { status: 500 })
     }
 
-    // Get public URL
-    const { data: urlData } = supabase.storage.from("invoices").getPublicUrl(fileName)
+    const nextOrderNumber = (maxOrder?.order_number || 0) + 1
 
+    const { data: insertedData, error } = await supabase
+      .from("invoices")
+      .insert([
+        {
+          thca_legal: data.thcALegal,
+          customer_type: data.customerType,
+          location_count: data.locationCount,
+          customer_name: data.formData.name,
+          customer_email: data.formData.email,
+          sales_rep: data.formData.rep,
+          selected_products: data.selectedProducts,
+        },
+      ])
+      .select("id, order_number") // Select the generated id and order_number
+
+    if (error) {
+      console.error("Error inserting data:", error)
+      return NextResponse.json({ error: error.message }, { status: 500 })
+    }
+
+    // Return the generated id and order_number
     return NextResponse.json(
-      {
-        success: true,
-        pdfUrl: urlData.publicUrl,
-        message: "PDF uploaded successfully",
-      },
+      { message: "Invoice saved successfully!", id: insertedData[0].id, orderNumber: insertedData[0].order_number },
       { status: 200 },
     )
-  } catch (error: any) {
-    console.error("❌ PDF upload failed:", error)
-    return NextResponse.json(
-      {
-        error: "Failed to upload PDF.",
-        details: error.message,
-      },
-      {
-        status: 500,
-      },
-    )
+  } catch (error) {
+    console.error("Error in POST /api/invoices:", error)
+    return NextResponse.json({ error: "Internal Server Error" }, { status: 500 })
   }
 }
+
+export async function GET() {
+  try {
+    const { data: invoices, error } = await supabase
+      .from("invoices")
+      .select("*")
+      .order("order_date", { ascending: false })
+
+    if (error) {
+      console.error("Error fetching data:", error)
+      return NextResponse.json({ error: error.message }, { status: 500 })
+    }
+
+    return NextResponse.json(invoices, { status: 200 })
+  } catch (error) {
+    console.error("Error in GET /api/invoices:", error)
+    return NextResponse.json({ error: "Internal Server Error" }, { status: 500 })
+  }
+}
+ 

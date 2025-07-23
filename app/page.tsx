@@ -501,7 +501,7 @@ for (const product of Object.values(selectedProducts)) {
   formData.append("pdf", pdfBlob, "invoice.pdf");
 
   try {
-    const res = await fetch("/api/send-invoices", {
+    const res = await fetch("/api/send-invoice", {
       method: "POST",
       body: formData,
     });

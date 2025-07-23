@@ -1,99 +1,136 @@
-import { NextResponse } from "next/server"
 import nodemailer from "nodemailer"
 
-export async function POST(request: Request) {
+export const runtime = "nodejs"
+
+export async function POST(req: Request) {
   try {
-    const { pdfUrl, orderId } = await request.json()
+    console.log("📧 Email API called")
 
-    console.log("📧 Starting email send process...")
-    console.log("PDF URL:", pdfUrl)
-    console.log("Order ID:", orderId)
+    const body = await req.json()
+    console.log("✅ Received body:", JSON.stringify(body, null, 2))
 
-    // Check for required environment variables
-    if (!process.env.GMAIL_APP_PASSWORD) {
-      console.error("❌ GMAIL_APP_PASSWORD not found in environment variables")
-      return NextResponse.json({ error: "Email configuration missing. Please contact support." }, { status: 500 })
+    const pdfUrl = body?.pdfUrl?.trim()
+    const orderId = body?.orderId?.trim() || "N/A"
+
+    if (!pdfUrl) {
+      console.error("❌ Missing PDF URL")
+      return new Response(JSON.stringify({ error: "Missing PDF URL." }), {
+        status: 400,
+        headers: { "Content-Type": "application/json" },
+      })
     }
 
-    // Create transporter with Gmail
-    const transporter = nodemailer.createTransporter({
+    // Gmail credentials from environment variables
+    const user = "info@wazabilabs.com"
+    const pass = process.env.GMAIL_APP_PASSWORD
+
+    console.log("📧 Email user:", user)
+    console.log("📧 Password exists:", !!pass)
+
+    if (!pass) {
+      console.error("❌ GMAIL_APP_PASSWORD not set.")
+      return new Response(JSON.stringify({ error: "Email password not configured." }), {
+        status: 500,
+        headers: { "Content-Type": "application/json" },
+      })
+    }
+
+    console.log("✅ Creating transporter...")
+
+    // Configure Nodemailer with Gmail
+    const transporter = nodemailer.createTransport({
       service: "gmail",
       auth: {
-        user: "info@wazabilabs.com",
-        pass: process.env.GMAIL_APP_PASSWORD,
+        user,
+        pass,
       },
       debug: true, // Enable debug logging
-      logger: true, // Enable logging
+      logger: true, // Enable logger
     })
-
-    console.log("📧 Verifying transporter...")
 
     // Verify transporter configuration
     try {
+      console.log("🔍 Verifying transporter...")
       await transporter.verify()
       console.log("✅ Transporter verified successfully")
     } catch (verifyError) {
       console.error("❌ Transporter verification failed:", verifyError)
-      return NextResponse.json({ error: "Email server configuration error. Please contact support." }, { status: 500 })
+      return new Response(
+        JSON.stringify({
+          error: "Email configuration verification failed.",
+          details: verifyError.message,
+        }),
+        {
+          status: 500,
+          headers: { "Content-Type": "application/json" },
+        },
+      )
     }
 
+    const timestamp = new Date().toISOString()
+    const uniqueSubject = `🧾 Wazabi Rescue Order — #${orderId} @ ${timestamp}`
+
     const mailOptions = {
-      from: "info@wazabilabs.com",
-      to: "info@wazabilabs.com",
-      subject: `New Wazabi Order #${orderId}`,
+      from: `"Wazabi Rescue Orders" <${user}>`,
+      to: ["info@wazabilabs.com", "okashaamjadali360@gmail.com"],
+      subject: uniqueSubject,
+      headers: {
+        "Message-ID": `<order-${orderId}-${Date.now()}@wazabilabs.com>`,
+      },
       html: `
-        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-          <h2 style="color: #333;">New Order Received</h2>
-          <p>A new order has been placed:</p>
-          <ul>
-            <li><strong>Order ID:</strong> ${orderId}</li>
-            <li><strong>Date:</strong> ${new Date().toLocaleDateString()}</li>
-          </ul>
-          <p>
-            <a href="${pdfUrl}" 
-               style="background-color: #4CAF50; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; display: inline-block;">
-              Download Invoice PDF
-            </a>
+        <div style="font-family: Arial, sans-serif; padding: 20px; color: #333;">
+          <h2>🛒 Wazabi Rescue New Order</h2>
+          <p><strong>Order ID:</strong> ${orderId}</p>
+          <p>Click below to view and download the invoice:</p>
+          <a href="${pdfUrl}" style="display:inline-block;padding:12px 24px;background:#10b981;color:#fff;text-decoration:none;border-radius:6px;font-weight:bold;margin:10px 0;">
+            📄 Download Invoice PDF
+          </a>
+          <p style="margin-top: 20px;">
+            <strong>Direct Link:</strong><br>
+            <a href="${pdfUrl}" style="color: #10b981; word-break: break-all;">${pdfUrl}</a>
           </p>
-          <p style="color: #666; font-size: 12px;">
-            This email was automatically generated from the Wazabi order system.
-          </p>
+          <hr style="margin: 30px 0;" />
+          <p style="font-size: 12px; color: #888;">This is an automated notification from Wazabi Orders.</p>
         </div>
       `,
     }
 
-    console.log("📧 Sending email...")
-    console.log("Mail options:", {
+    console.log("✅ Mail options prepared:", {
       from: mailOptions.from,
       to: mailOptions.to,
       subject: mailOptions.subject,
+      pdfUrl: pdfUrl.substring(0, 100) + "...",
     })
 
-    const info = await transporter.sendMail(mailOptions)
+    console.log("📤 Sending email...")
+    const result = await transporter.sendMail(mailOptions)
+    console.log("✅ Email sent successfully:", result.messageId)
 
-    console.log("✅ Email sent successfully!")
-    console.log("Message ID:", info.messageId)
-    console.log("Response:", info.response)
-
-    return NextResponse.json(
-      {
+    return new Response(
+      JSON.stringify({
+        success: true,
         message: "Email sent successfully",
-        messageId: info.messageId,
-        response: info.response,
-      },
-      { status: 200 },
-    )
-  } catch (error) {
-    console.error("❌ Error in send-invoices route:", error)
-    console.error("Error stack:", error instanceof Error ? error.stack : "No stack trace")
-
-    return NextResponse.json(
+        messageId: result.messageId,
+      }),
       {
-        error: "Failed to send email",
-        details: error instanceof Error ? error.message : "Unknown error",
-        stack: error instanceof Error ? error.stack : undefined,
+        status: 200,
+        headers: { "Content-Type": "application/json" },
       },
-      { status: 500 },
+    )
+  } catch (error: any) {
+    console.error("❌ Email sending failed:", error)
+    console.error("❌ Error stack:", error.stack)
+
+    return new Response(
+      JSON.stringify({
+        error: "Failed to send email.",
+        details: error.message,
+        stack: error.stack,
+      }),
+      {
+        status: 500,
+        headers: { "Content-Type": "application/json" },
+      },
     )
   }
 }

@@ -63,7 +63,7 @@ export async function POST(request: NextRequest) {
     const mailOptions = {
       from: gmailUser,
       to: "info@wazabilabs.com, okashaamjadali360@gmail.com, arij305@gmail.com",
-      subject: "New Wazabi Order Received",
+      subject: "New Wazabi Rescue Order Received",
       html: `
         <h2>New Order Notification</h2>
         <p>A new order has been placed and is ready for review.</p>
